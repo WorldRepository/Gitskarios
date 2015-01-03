@@ -1,7 +1,6 @@
 package com.alorma.github.ui.fragment.menu;
 
 import android.app.Fragment;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -16,11 +15,9 @@ import com.alorma.github.R;
 import com.alorma.github.sdk.bean.dto.response.User;
 import com.alorma.github.sdk.services.client.BaseClient;
 import com.alorma.github.sdk.services.user.GetAuthUserClient;
-import com.alorma.github.sdk.utils.GitskariosSettings;
 import com.alorma.github.ui.adapter.MenuItemsAdapter;
 import com.alorma.github.ui.view.CircularImageView;
 import com.alorma.githubicons.GithubIconify;
-import com.google.gson.Gson;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
 import java.util.ArrayList;
@@ -80,6 +77,7 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 		objMenuItems.add(currentSelectedItem);
 		objMenuItems.add(new MenuItem(1, 2, R.string.navigation_starred_repos, GithubIconify.IconValue.octicon_star));
 		objMenuItems.add(new MenuItem(2, 2, R.string.navigation_watched_repos, GithubIconify.IconValue.octicon_eye));
+		objMenuItems.add(new MenuItem(3, 2, R.string.navigation_gists, GithubIconify.IconValue.octicon_gist));
 
 		objMenuItems.add(new MenuItem(0, 3, R.string.navigation_followers, GithubIconify.IconValue.octicon_person));
 		objMenuItems.add(new MenuItem(1, 3, R.string.navigation_following, GithubIconify.IconValue.octicon_person));
@@ -151,6 +149,9 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 				break;
 			case 2:
 				onMenuItemSelectedListener.onWatchedSelected();
+				break;
+			case 3:
+				onMenuItemSelectedListener.onGitsSelected();
 				break;
 		}
 	}
@@ -225,5 +226,7 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 		void onSettingsSelected();
 
 		void onAboutSelected();
+
+		void onGitsSelected();
 	}
 }

@@ -22,6 +22,7 @@ import com.alorma.github.sdk.services.user.GetAuthUserClient;
 import com.alorma.github.sdk.utils.GitskariosSettings;
 import com.alorma.github.ui.activity.base.BaseActivity;
 import com.alorma.github.ui.fragment.events.EventsListFragment;
+import com.alorma.github.ui.fragment.gists.GistsListFragment;
 import com.alorma.github.ui.fragment.menu.MenuFragment;
 import com.alorma.github.ui.fragment.menu.MenuItem;
 import com.alorma.github.ui.fragment.orgs.OrganzationsFragment;
@@ -48,6 +49,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 	private boolean iabEnabled;
 	private OrganzationsFragment organizationsFragmet;
 	private EventsListFragment eventsFragment;
+	private GistsListFragment gistsFragment;
 
 	public static void startActivity(Activity context) {
 		Intent intent = new Intent(context, MainActivity.class);
@@ -196,6 +198,14 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 	public void onAboutSelected() {
 		Intent intent = AboutActivity.launchIntent(this);
 		startActivity(intent);
+	}
+
+	@Override
+	public void onGitsSelected() {
+		if (gistsFragment == null) {
+			gistsFragment = GistsListFragment.newInstance();
+		}
+		setFragment(gistsFragment);
 	}
 
 	@Override

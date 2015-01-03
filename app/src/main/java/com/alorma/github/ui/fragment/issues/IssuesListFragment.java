@@ -78,8 +78,8 @@ public class IssuesListFragment extends PaginatedListFragment<ListIssues> implem
 				setListAdapter(issuesAdapter);
 			}
 
-			if (issuesAdapter.isLazyLoading()) {
-				if (issuesAdapter != null) {
+			if (issuesAdapter != null) {
+				if (issuesAdapter.isLazyLoading()) {
 					issuesAdapter.setLazyLoading(false);
 					issuesAdapter.addAll(issues);
 				}
