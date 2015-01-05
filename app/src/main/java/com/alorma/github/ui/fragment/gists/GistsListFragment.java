@@ -30,6 +30,10 @@ public class GistsListFragment extends PaginatedListFragment<ListGists> {
 	protected void executePaginatedRequest(int page) {
 		super.executePaginatedRequest(page);
 
+		if (gistsAdapter != null) {
+			gistsAdapter.setLazyLoading(true);
+		}
+		
 		UserGistsClient userGistsClient = new UserGistsClient(getActivity(), page);
 		userGistsClient.setOnResultCallback(this);
 		userGistsClient.execute();
