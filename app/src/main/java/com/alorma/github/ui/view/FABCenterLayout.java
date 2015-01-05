@@ -129,7 +129,7 @@ public class FABCenterLayout extends RelativeLayout implements ViewTreeObserver.
 
 	public void setFabIcon(Drawable drawable) {
 		if (fabView != null) {
-			fabView.setDrawable(drawable);
+			fabView.setIconDrawable(drawable);
 		}
 	}
 
