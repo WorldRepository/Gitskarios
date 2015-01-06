@@ -1,6 +1,7 @@
 package com.alorma.github.ui.adapter.detail.repo;
 
 import android.content.Context;
+import android.support.annotation.StyleRes;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,7 @@ import android.widget.TextView;
 import com.alorma.github.R;
 import com.alorma.github.sdk.bean.dto.response.Content;
 import com.alorma.github.sdk.bean.dto.response.ContentType;
+import com.alorma.github.utils.AttributesUtils;
 import com.alorma.githubicons.GithubIconDrawable;
 import com.alorma.githubicons.GithubIconify;
 
@@ -23,10 +25,12 @@ public class RepoSourceAdapter extends ArrayAdapter<Content> {
 
 	private final LayoutInflater inflater;
 	private Context context;
+	private int style;
 
-	public RepoSourceAdapter(Context context, List<Content> objects) {
+	public RepoSourceAdapter(Context context, List<Content> objects, @StyleRes int style) {
 		super(context, 0, objects);
 		this.context = context;
+		this.style = style;
 		inflater = LayoutInflater.from(context);
 	}
 
@@ -54,7 +58,7 @@ public class RepoSourceAdapter extends ArrayAdapter<Content> {
 
 		if (iconDrawable != null) {
 			iconDrawable.sizeDp(GithubIconDrawable.ANDROID_ACTIONBAR_ICON_SIZE_DP);
-			iconDrawable.colorRes(R.color.primary_light);
+			iconDrawable.color(AttributesUtils.getPrimaryLightColor(getContext(), style));
 
 			image.setImageDrawable(iconDrawable);
 		}
