@@ -1,5 +1,6 @@
 package com.alorma.github.ui.fragment.gists;
 
+import com.alorma.github.R;
 import com.alorma.github.sdk.bean.dto.response.ListGists;
 import com.alorma.github.sdk.services.gists.UserGistsClient;
 import com.alorma.github.ui.adapter.gists.GistsAdapter;
@@ -64,11 +65,21 @@ public class GistsListFragment extends PaginatedListFragment<ListGists> {
 
 	@Override
 	protected GithubIconify.IconValue getNoDataIcon() {
-		return null;
+		return GithubIconify.IconValue.octicon_gist;
 	}
 
 	@Override
 	protected int getNoDataText() {
-		return 0;
+		return R.string.no_gists;
+	}
+
+	@Override
+	protected boolean useFAB() {
+		return true;
+	}
+
+	@Override
+	protected GithubIconify.IconValue getFABGithubIcon() {
+		return GithubIconify.IconValue.octicon_plus;
 	}
 }

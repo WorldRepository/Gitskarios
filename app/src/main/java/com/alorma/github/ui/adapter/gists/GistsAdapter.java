@@ -10,6 +10,7 @@ import android.widget.TextView;
 import com.alorma.github.R;
 import com.alorma.github.sdk.bean.dto.response.Gist;
 import com.alorma.github.ui.adapter.LazyAdapter;
+import com.alorma.github.utils.AttributesUtils;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
 import java.util.List;
@@ -41,8 +42,6 @@ public class GistsAdapter extends LazyAdapter<Gist> {
 			user.setText(gist.owner.login);
 			if (gist.owner.avatar_url != null) {
 				ImageLoader.getInstance().displayImage(gist.owner.avatar_url, avatar);
-			} else {
-				avatar.setImageDrawable(new ColorDrawable(getContext().getResources().getColor(R.color.accent)));
 			}
 		}
 

@@ -24,6 +24,9 @@
         </activity>
         <activity
             android:name="com.alorma.github.ui.activity.MainActivity"/>
+        <activity
+            android:name="com.alorma.github.ui.activity.GistsActivity"
+            android:theme="@style/AppTheme.Gists"/>
         <activity android:name="com.alorma.github.ui.activity.ProfileActivity"/>
         <activity android:name="com.alorma.github.ui.activity.CommitDetailActivity"/>
         <activity android:name="com.alorma.github.ui.activity.RepoDetailActivity"/>
@@ -71,7 +74,10 @@
         <activity
             android:name="com.alorma.github.ui.activity.ReposActivity">
         </activity>
-        <meta-data android:name="com.crashlytics.ApiKey" android:value="e331bb7b7ec0167c4cfcc3b095a54a718802f080"/>
+
+        <meta-data
+            android:name="com.crashlytics.ApiKey"
+            android:value="e331bb7b7ec0167c4cfcc3b095a54a718802f080"/>
     </application>
 
 </manifest>

@@ -16,8 +16,6 @@ import com.alorma.github.inapp.IabHelper;
 import com.alorma.github.inapp.IabResult;
 import com.alorma.github.inapp.Inventory;
 import com.alorma.github.inapp.Purchase;
-import com.alorma.github.sdk.bean.dto.response.User;
-import com.alorma.github.sdk.services.client.BaseClient;
 import com.alorma.github.sdk.services.user.GetAuthUserClient;
 import com.alorma.github.sdk.utils.GitskariosSettings;
 import com.alorma.github.ui.activity.base.BaseActivity;
@@ -31,9 +29,6 @@ import com.alorma.github.ui.fragment.repos.StarredReposFragment;
 import com.alorma.github.ui.fragment.repos.WatchedReposFragment;
 import com.alorma.github.ui.fragment.users.FollowersFragment;
 import com.alorma.github.ui.fragment.users.FollowingFragment;
-
-import retrofit.RetrofitError;
-import retrofit.client.Response;
 
 public class MainActivity extends BaseActivity implements View.OnClickListener, MenuFragment.OnMenuItemSelectedListener, IabHelper.OnIabSetupFinishedListener,
 		IabHelper.OnIabPurchaseFinishedListener, IabHelper.QueryInventoryFinishedListener {
@@ -59,7 +54,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
+		setContentView(R.layout.activity_base_drawer);
 
 		GetAuthUserClient client = new GetAuthUserClient(this);
 		client.execute();
@@ -202,10 +197,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
 	@Override
 	public void onGitsSelected() {
-		if (gistsFragment == null) {
-			gistsFragment = GistsListFragment.newInstance();
-		}
-		setFragment(gistsFragment);
+		Intent intent = GistsActivity.launchIntent(this);
+		startActivity(intent);
 	}
 
 	@Override
