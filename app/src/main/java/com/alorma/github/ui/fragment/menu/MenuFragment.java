@@ -4,6 +4,7 @@ import android.app.Fragment;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.StyleRes;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -31,6 +32,7 @@ import retrofit.client.Response;
  */
 public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuItemSelectedListener, BaseClient.OnResultCallback<User>, View.OnClickListener {
 
+	private static final String STYLE = "STYLE";
 	private OnMenuItemSelectedListener onMenuItemSelectedListener;
 	private MenuItemsAdapter adapter;
 	private MenuItem currentSelectedItem;
@@ -41,6 +43,17 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 
 	public static MenuFragment newInstance() {
 		return new MenuFragment();
+	}
+	public static MenuFragment newInstance(@StyleRes int style) {
+		Bundle b = new Bundle();
+
+		b.putInt(STYLE, style);
+		
+		MenuFragment f = new MenuFragment();
+		
+		f.setArguments(b);
+		
+		return f;
 	}
 
 	@Nullable
@@ -90,7 +103,12 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 		RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.recycler);
 		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-		adapter = new MenuItemsAdapter(getActivity(), objMenuItems);
+		int style = R.style.AppTheme_Repos;
+		if (getArguments() != null) {
+			style = getArguments().getInt(STYLE, R.style.AppTheme_Repos);
+		}
+		
+		adapter = new MenuItemsAdapter(getActivity(), objMenuItems, style);
 		adapter.setOnMenuItemSelectedListener(this);
 		recyclerView.setAdapter(adapter);
 

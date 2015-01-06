@@ -33,7 +33,7 @@ public class GistsActivity extends BaseActivity{
 
 
 		FragmentTransaction ft = getFragmentManager().beginTransaction();
-		menuFragment = MenuFragment.newInstance();
+		menuFragment = MenuFragment.newInstance(R.style.AppTheme_Gists);
 		ft.replace(R.id.menuContent, menuFragment);
 		ft.commit();
 		

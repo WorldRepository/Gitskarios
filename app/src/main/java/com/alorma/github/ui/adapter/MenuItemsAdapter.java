@@ -30,11 +30,11 @@ public class MenuItemsAdapter extends RecyclerView.Adapter<MenuItemsAdapter.Menu
 	private Context context;
 	private List<MenuItem> objects;
 
-	public MenuItemsAdapter(Context context, List<MenuItem> objects) {
+	public MenuItemsAdapter(Context context, List<MenuItem> objects, int style) {
 		this.context = context;
 		this.objects = objects;
 		mInflater = LayoutInflater.from(context);
-		color = AttributesUtils.getPrimaryDarkColor(context, R.style.AppTheme_Repos);
+		color = AttributesUtils.getPrimaryDarkColor(context, style);
 	}
 
 	@Override
