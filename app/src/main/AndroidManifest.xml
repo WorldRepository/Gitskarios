@@ -69,6 +69,8 @@
         <activity
             android:name="com.alorma.github.ui.activity.IssueDetailActivity"/>
         <activity
+            android:name="com.alorma.github.ui.activity.PullRequestDetailActivity"/>
+        <activity
             android:name="com.alorma.github.ui.activity.SettingsActivity"
             android:label="@string/title_activity_settings"/>
         <activity

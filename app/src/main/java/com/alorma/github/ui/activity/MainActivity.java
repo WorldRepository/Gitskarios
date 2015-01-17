@@ -8,6 +8,9 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.v4.view.MenuItemCompat;
+import android.support.v7.widget.SearchView;
+import android.view.Menu;
 import android.view.View;
 
 import com.alorma.github.R;
@@ -27,11 +30,12 @@ import com.alorma.github.ui.fragment.orgs.OrganzationsFragment;
 import com.alorma.github.ui.fragment.repos.ReposFragment;
 import com.alorma.github.ui.fragment.repos.StarredReposFragment;
 import com.alorma.github.ui.fragment.repos.WatchedReposFragment;
+import com.alorma.github.ui.fragment.search.SearchReposFragment;
 import com.alorma.github.ui.fragment.users.FollowersFragment;
 import com.alorma.github.ui.fragment.users.FollowingFragment;
 
-public class MainActivity extends BaseActivity implements View.OnClickListener, MenuFragment.OnMenuItemSelectedListener, IabHelper.OnIabSetupFinishedListener,
-		IabHelper.OnIabPurchaseFinishedListener, IabHelper.QueryInventoryFinishedListener {
+public class MainActivity extends BaseActivity implements MenuFragment.OnMenuItemSelectedListener, IabHelper.OnIabSetupFinishedListener,
+		IabHelper.OnIabPurchaseFinishedListener, IabHelper.QueryInventoryFinishedListener, SearchView.OnQueryTextListener, SearchView.OnCloseListener {
 
 	private MenuFragment menuFragment;
 
@@ -45,6 +49,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 	private OrganzationsFragment organizationsFragmet;
 	private EventsListFragment eventsFragment;
 	private GistsListFragment gistsFragment;
+	private SearchReposFragment searchReposFragment;
+	private SearchView searchView;
+	private android.view.MenuItem searchItem;
 
 	public static void startActivity(Activity context) {
 		Intent intent = new Intent(context, MainActivity.class);
@@ -74,6 +81,71 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 	}
 
 	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		super.onCreateOptionsMenu(menu);
+
+		if (getToolbar() != null) {
+			getToolbar().inflateMenu(R.menu.main_menu);
+
+			searchItem = menu.findItem(R.id.action_search);
+
+			MenuItemCompat.setOnActionExpandListener(searchItem, new MenuItemCompat.OnActionExpandListener() {
+				@Override
+				public boolean onMenuItemActionExpand(android.view.MenuItem item) {
+					return false;
+				}
+
+				@Override
+				public boolean onMenuItemActionCollapse(android.view.MenuItem item) {
+					clearSearch();
+					return false;
+				}
+			});
+
+			searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
+			searchView.setSubmitButtonEnabled(true);
+			searchView.setOnQueryTextListener(this);
+			searchView.setOnCloseListener(this);
+		}
+
+		return true;
+	}
+
+	private void clearSearch() {
+		if (searchReposFragment != null) {
+			getFragmentManager().popBackStack();
+			searchReposFragment = null;
+		}
+
+	}
+
+	@Override
+	public boolean onQueryTextSubmit(String s) {
+		search(s);
+		return false;
+	}
+
+	@Override
+	public boolean onQueryTextChange(String s) {
+		return false;
+	}
+
+	@Override
+	public boolean onClose() {
+		clearSearch();
+		return false;
+	}
+
+	private void search(String query) {
+		if (searchReposFragment != null) {
+			searchReposFragment.setQuery(query);
+		} else {
+			searchReposFragment = SearchReposFragment.newInstance(query);
+			setFragment(searchReposFragment, true);
+		}
+	}
+
+	@Override
 	public void onIabSetupFinished(IabResult result) {
 		iabEnabled = result.isSuccess();
 		if (iabEnabled) {
@@ -86,19 +158,21 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
 	}
 
-	@Override
-	public void onClick(View v) {
-		switch (v.getId()) {
-			case R.id.searchIcon:
-				Intent search = SearchReposActivity.createLauncherIntent(this);
-				startActivity(search);
-				break;
+	private void setFragment(Fragment fragment) {
+		if (searchView != null) {
+			if (!searchView.isIconified()) {
+				searchView.setIconified(true);
+			}
 		}
+		setFragment(fragment, false);
 	}
 
-	private void setFragment(Fragment fragment) {
+	private void setFragment(Fragment fragment, boolean addToBackStack) {
 		FragmentTransaction ft = getFragmentManager().beginTransaction();
 		ft.replace(R.id.content, fragment);
+		if (addToBackStack) {
+			ft.addToBackStack(null);
+		}
 		ft.commit();
 	}
 
@@ -178,8 +252,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 				eventsFragment = EventsListFragment.newInstance(user);
 			}
 			setFragment(eventsFragment);
-		} else {
-			// TODO SHOW Error no user
 		}
 	}
 
@@ -242,6 +314,15 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 				editor.apply();
 			}
 			invalidateOptionsMenu();
+		}
+	}
+
+	@Override
+	public void onBackPressed() {
+		if (!searchView.isIconified()) {
+			searchView.setIconified(true);
+		} else {
+			super.onBackPressed();
 		}
 	}
 }
