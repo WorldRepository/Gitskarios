@@ -4,17 +4,19 @@ import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.graphics.Palette;
+import android.support.v7.widget.CardView;
 import android.text.TextUtils;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.alorma.github.R;
@@ -33,12 +35,10 @@ import com.alorma.github.ui.cards.profile.BioCard;
 import com.alorma.github.ui.cards.profile.GithubDataCard;
 import com.alorma.github.ui.cards.profile.GithubPlanCard;
 import com.alorma.github.ui.utils.PaletteUtils;
-import com.alorma.github.ui.view.FABCenterLayout;
 import com.alorma.github.utils.AttributesUtils;
 import com.alorma.githubicons.GithubIconDrawable;
 import com.alorma.githubicons.GithubIconify;
 
-import it.gmariotti.cardslib.library.view.CardViewNative;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
 
@@ -48,25 +48,16 @@ import retrofit.client.Response;
 public class ProfileActivity extends BackActivity implements BaseClient.OnResultCallback<User>,
 		PaletteUtils.PaletteUtilsListener, BioCard.BioCardListener,
 		GithubDataCard.GithubDataCardListener,
-		View.OnClickListener,
-		FABCenterLayout.FABScrollContentListener,
-		OnCheckFollowingUser {
+		OnCheckFollowingUser, GithubPlanCard.GithubDataCardListener {
 
 	private static final String USER = "USER";
 	private static final String FROM_INTENT_FILTER = "FROM_INTENT_FILTER";
 
-
-	private CardViewNative cardBio;
-	private CardViewNative cardRepos;
-	private ViewGroup cardsContainer;
-	private FABCenterLayout fabLayout;
 	private ImageView image;
-	private GithubIconDrawable fabDrawable;
 	private int avatarColor;
 	private User user;
-	private int avatarSecondaryColor;
 	private boolean followingUser = false;
-	private CardViewNative cardPlan;
+	private boolean isAuthUser;
 
 	public static Intent createLauncherIntent(Context context) {
 		return new Intent(context, ProfileActivity.class);
@@ -95,22 +86,7 @@ public class ProfileActivity extends BackActivity implements BaseClient.OnResult
 		setContentView(R.layout.profile_activity);
 
 		avatarColor = AttributesUtils.getAccentColor(this, R.style.AppTheme_Repos);
-		avatarSecondaryColor = AttributesUtils.getPrimaryColor(this, R.style.AppTheme_Repos);
-
-		fabLayout = (FABCenterLayout) findViewById(R.id.fabLayout);
-		fabLayout.setFabViewVisibility(View.INVISIBLE, false);
-
-		fabLayout.setFabScrollContentListener(this);
-
 		image = (ImageView) findViewById(R.id.image);
-
-		cardsContainer = (ViewGroup) findViewById(R.id.cardsContainer);
-
-		cardsContainer.setVisibility(View.INVISIBLE);
-
-		cardBio = (CardViewNative) findViewById(R.id.cardBio);
-		cardRepos = (CardViewNative) findViewById(R.id.cardRepos);
-		cardPlan = (CardViewNative) findViewById(R.id.cardPlan);
 
 		BaseUsersClient<User> requestClient;
 		User user = null;
@@ -138,11 +114,9 @@ public class ProfileActivity extends BackActivity implements BaseClient.OnResult
 
 		GitskariosSettings gitskariosSettings = new GitskariosSettings(this);
 		String authUser = gitskariosSettings.getAuthUser(null);
+		isAuthUser = !TextUtils.isEmpty(authUser) && authUser.equals(user.login);
 
-		if (!TextUtils.isEmpty(authUser) && authUser.equals(user.login)) {
-			fabLayout.removeFab();
-		} else {
-
+		if (!isAuthUser) {
 			CheckFollowingUser checkFollowingUser = new CheckFollowingUser(this, user.login);
 			checkFollowingUser.setOnCheckFollowingUser(this);
 			checkFollowingUser.execute();
@@ -153,33 +127,80 @@ public class ProfileActivity extends BackActivity implements BaseClient.OnResult
 		}
 	}
 
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		super.onPrepareOptionsMenu(menu);
+
+		if (!isAuthUser) {
+			menu.clear();
+
+			int title = R.string.follow;
+			if (followingUser) {
+				title = R.string.unfollow;
+			}
+			menu.add(0, R.id.action_user_star, 0, title);
+
+			MenuItem item = menu.findItem(R.id.action_user_star);
+
+			GithubIconDrawable drawable = new GithubIconDrawable(this, GithubIconify.IconValue.octicon_heart);
+			drawable.setStyle(Paint.Style.FILL);
+			if (followingUser) {
+				drawable.color(avatarColor);
+			} else {
+				drawable.color(AttributesUtils.getIconsColor(this, R.style.AppTheme_Repos));
+			}
+			drawable.actionBarSize();
+
+			item.setIcon(drawable);
+			item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+		}
+
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		super.onOptionsItemSelected(item);
+
+		switch (item.getItemId()) {
+			case R.id.action_user_star:
+				if (followingUser) {
+					UnfollowUserClient unfollowUserClient = new UnfollowUserClient(this, user.login);
+					unfollowUserClient.setOnCheckFollowingUser(this);
+					unfollowUserClient.execute();
+				} else {
+					FollowUserClient followUserClient = new FollowUserClient(this, user.login);
+					followUserClient.setOnCheckFollowingUser(this);
+					followUserClient.execute();
+				}
+				break;
+		}
+
+		return true;
+	}
+
 	private void fillCardBio(User user) {
-		BioCard card = new BioCard(this, user, avatarSecondaryColor);
-
+		CardView view = (CardView) findViewById(R.id.bioCardLayout);
+		view.setCardElevation(4);
+		BioCard card = new BioCard(user, view, avatarColor);
 		card.setBioCardListener(this);
-
-		cardBio.setCard(card);
-		cardBio.setVisibility(View.VISIBLE);
 	}
 
 	private void fillCardRepos(User user) {
-		GithubDataCard card = new GithubDataCard(this, user, avatarSecondaryColor);
-
-		card.setGithubDataCardListener(this);
-
-		cardRepos.setCard(card);
-		cardRepos.setVisibility(View.VISIBLE);
+		CardView view = (CardView) findViewById(R.id.dataCardLayout);
+		view.setCardElevation(4);
+		GithubDataCard dataCard = new GithubDataCard(user, view, avatarColor);
+		dataCard.setGithubDataCardListener(this);
 	}
 
 	private void fillCardPlan(User user) {
+		CardView view = (CardView) findViewById(R.id.planCardLayout);
+		view.setCardElevation(4);
 		if (user.plan != null) {
-			GithubPlanCard card = new GithubPlanCard(this, user, avatarSecondaryColor);
-
-			cardPlan.setCard(card);
-			cardPlan.setVisibility(View.VISIBLE);
+			GithubPlanCard dataCard = new GithubPlanCard(user, view, avatarColor);
+			dataCard.setGithubDataCardListener(this);
 		} else {
-			cardPlan.setVisibility(View.INVISIBLE);
-			cardsContainer.removeView(cardPlan);
+			view.setVisibility(View.GONE);
 		}
 	}
 
@@ -199,19 +220,22 @@ public class ProfileActivity extends BackActivity implements BaseClient.OnResult
 		image.setImageDrawable(drawable);
 		if (profileSwatchDark != null && profileSwatch != null) {
 			avatarColor = profileSwatchDark.getRgb();
-			avatarSecondaryColor = profileSwatch.getRgb();
+
+			if (avatarColor == 0 || avatarColor == -10790053 || avatarColor == -14343336 || avatarColor == -12566464 || avatarColor == -9826790) {
+				avatarColor = Color.GRAY;
+				getToolbar().setTitleTextColor(avatarColor);
+			}
+
 			if (profileSwatch.getRgb() != 0) {
-				fabLayout.setFabColor(avatarSecondaryColor);
-				if (fabDrawable != null) {
-					fabDrawable.color(avatarColor);
-					fabLayout.setFabIcon(fabDrawable);
+				if (!isAuthUser) {
+					invalidateOptionsMenu();
 				}
 			}
 
 			if (avatarColor != 0) {
-				fabLayout.setFabColorPressed(avatarColor);
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 					getWindow().setStatusBarColor(avatarColor);
+					getWindow().setNavigationBarColor(avatarColor);
 				}
 			}
 		}
@@ -221,8 +245,6 @@ public class ProfileActivity extends BackActivity implements BaseClient.OnResult
 		fillCardRepos(user);
 
 		fillCardPlan(user);
-
-		cardsContainer.setVisibility(View.VISIBLE);
 	}
 
 	@Override
@@ -261,60 +283,9 @@ public class ProfileActivity extends BackActivity implements BaseClient.OnResult
 	}
 
 	@Override
-	public void onClick(View v) {
-		if (followingUser) {
-			UnfollowUserClient unfollowUserClient = new UnfollowUserClient(this, user.login);
-			unfollowUserClient.setOnCheckFollowingUser(this);
-			unfollowUserClient.execute();
-		} else {
-			FollowUserClient followUserClient = new FollowUserClient(this, user.login);
-			followUserClient.setOnCheckFollowingUser(this);
-			followUserClient.execute();
-		}
-		fabLayout.setFabClickListener(null, null);
-	}
-
-	@Override
-	public void onScrollFactor(int alpha, float factor) {
-		if (getSupportActionBar() != null) {
-			ColorDrawable cd = new ColorDrawable(avatarColor);
-
-			if (alpha < 0) {
-				alpha = -alpha;
-			}
-
-			if (alpha > 255) {
-				alpha = 255;
-			}
-
-			cd.setAlpha(alpha);
-
-			getSupportActionBar().setBackgroundDrawable(cd);
-		}
-	}
-
-	@Override
 	public void onCheckFollowUser(String username, boolean following) {
 		followingUser = following;
 
-
-		fabDrawable = new GithubIconDrawable(this, GithubIconify.IconValue.octicon_heart);
-		fabDrawable.setStyle(Paint.Style.FILL);
-		if (following) {
-			fabDrawable.color(avatarColor);
-		} else {
-			fabDrawable.color(AttributesUtils.getIconsColor(this, R.style.AppTheme_Repos));
-		}
-		fabDrawable.actionBarSize();
-		fabLayout.setFabIcon(fabDrawable);
-		fabLayout.setFabClickListener(this, getTagFab());
-		fabLayout.setFabViewVisibility(View.VISIBLE, false);
-
-		fabLayout.setFabClickListener(this, null);
-	}
-
-	public String getTagFab() {
-		int string = followingUser ? R.string.unfollow : R.string.follow;
-		return getString(string);
+		invalidateOptionsMenu();
 	}
 }
