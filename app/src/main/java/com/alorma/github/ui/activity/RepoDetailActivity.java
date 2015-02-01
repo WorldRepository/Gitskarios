@@ -5,6 +5,7 @@ import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v13.app.FragmentPagerAdapter;
@@ -29,11 +30,14 @@ import com.alorma.github.sdk.services.repo.actions.WatchRepoClient;
 import com.alorma.github.ui.ErrorHandler;
 import com.alorma.github.ui.activity.base.BackActivity;
 import com.alorma.github.ui.fragment.commit.CommitsListFragment;
-import com.alorma.github.ui.fragment.detail.repo.MarkdownFragment;
+import com.alorma.github.ui.fragment.detail.repo.ReadmeFragment;
 import com.alorma.github.ui.fragment.detail.repo.SourceListFragment;
 import com.alorma.github.ui.fragment.issues.IssuesListFragment;
 import com.alorma.github.ui.listeners.RefreshListener;
 import com.alorma.github.ui.view.SlidingTabLayout;
+import com.alorma.github.utils.AttributesUtils;
+import com.alorma.githubicons.GithubIconDrawable;
+import com.alorma.githubicons.GithubIconify;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,15 +57,17 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 	private Uri shareUri;
 	private RepoInfo repoInfo;
 	private boolean fromIntentFilter;
-	private boolean repoStarred;
-	private boolean repoWatched;
+
+	private Boolean repoStarred = null;
+	private Boolean repoWatched = null;
+
 	private Repo currentRepo;
-	private MarkdownFragment markdownFragment;
+	private ReadmeFragment readmeFragment;
 	private SourceListFragment sourceListFragment;
 	private IssuesListFragment issuesListFragment;
 	private CommitsListFragment commitsListFragment;
 	//private PullRequestsListFragment pullRequestsListFragment;
-	
+
 	private ViewPager viewPager;
 	private List<Fragment> listFragments;
 
@@ -108,20 +114,23 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 
 			viewPager = (ViewPager) findViewById(R.id.pager);
 
-			markdownFragment = MarkdownFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
+			readmeFragment = ReadmeFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
 			sourceListFragment = SourceListFragment.newInstance(repoInfo.owner, repoInfo.repo, null, this);
 			issuesListFragment = IssuesListFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
 			commitsListFragment = CommitsListFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
 			//pullRequestsListFragment = PullRequestsListFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
 
 			listFragments = new ArrayList<>();
-			listFragments.add(markdownFragment);
+			listFragments.add(readmeFragment);
 			listFragments.add(sourceListFragment);
 			listFragments.add(commitsListFragment);
 			listFragments.add(issuesListFragment);
 			//listFragments.add(pullRequestsListFragment);
 
 			viewPager.setAdapter(new NavigationPagerAdapter(getFragmentManager(), listFragments));
+			
+			viewPager.setOffscreenPageLimit(listFragments.size());
+					
 			slidingTabLayout.setViewPager(viewPager);
 			load();
 		} else {
@@ -204,7 +213,34 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 		MenuItem item = menu.findItem(R.id.share_repo);
 
 		item.setIcon(getResources().getDrawable(R.drawable.abc_ic_menu_share_mtrl_alpha));
-		
+
+		int colorPrimyDark = AttributesUtils.getPrimaryDarkColor(this, R.style.AppTheme_Repos);
+
+		if (repoWatched != null) {
+			int colorWatched = repoWatched ? Color.WHITE : colorPrimyDark;
+			menu.add(0, R.id.action_repo_watch, 1, R.string.menu_watch);
+			MenuItem itemWatch = menu.findItem(R.id.action_repo_watch);
+			itemWatch.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+			GithubIconDrawable drawableWatch = new GithubIconDrawable(this, GithubIconify.IconValue.octicon_eye);
+			drawableWatch.setStyle(Paint.Style.FILL);
+			drawableWatch.color(colorWatched);
+			drawableWatch.actionBarSize();
+			itemWatch.setIcon(drawableWatch);
+		}
+
+		if (repoStarred != null) {
+			int colorStarred = repoStarred ? Color.WHITE : colorPrimyDark;
+			menu.add(0, R.id.action_repo_star, 0, R.string.menu_star);
+
+			MenuItem itemStar = menu.findItem(R.id.action_repo_star);
+			itemStar.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+			GithubIconDrawable drawableStar = new GithubIconDrawable(this, GithubIconify.IconValue.octicon_star);
+			drawableStar.setStyle(Paint.Style.FILL);
+			drawableStar.color(colorStarred);
+			drawableStar.actionBarSize();
+			itemStar.setIcon(drawableStar);
+		}
+
 		return true;
 	}
 
@@ -216,7 +252,7 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 		intent.putExtra(Intent.EXTRA_TEXT, currentRepo.svn_url);
 		return intent;
 	}
-	
+
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		super.onOptionsItemSelected(item);
@@ -234,6 +270,10 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 		} else if (item.getItemId() == R.id.share_repo) {
 			Intent intent = getShareIntent();
 			startActivity(intent);
+		} else if (item.getItemId() == R.id.action_repo_watch) {
+			changeWatchedStatus();
+		} else if (item.getItemId() == R.id.action_repo_star) {
+			changeStarStatus();
 		}
 
 		return false;
@@ -249,7 +289,6 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 			starRepoClient.setOnResultCallback(new StarActionResult());
 			starRepoClient.execute();
 		}
-		showRefresh();
 	}
 
 	private void changeWatchedStatus() {
@@ -262,7 +301,6 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 			watchRepoClient.setOnResultCallback(new WatchActionResult());
 			watchRepoClient.execute();
 		}
-		showRefresh();
 	}
 
 	@Override

@@ -11,7 +11,6 @@ import android.support.annotation.NonNull;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.SearchView;
 import android.view.Menu;
-import android.view.View;
 
 import com.alorma.github.R;
 import com.alorma.github.inapp.IabConstants;
@@ -24,29 +23,23 @@ import com.alorma.github.sdk.utils.GitskariosSettings;
 import com.alorma.github.ui.activity.base.BaseActivity;
 import com.alorma.github.ui.fragment.events.EventsListFragment;
 import com.alorma.github.ui.fragment.gists.GistsListFragment;
-import com.alorma.github.ui.fragment.menu.MenuFragment;
+import com.alorma.github.ui.fragment.menu.MenuFragmentRepos;
 import com.alorma.github.ui.fragment.menu.MenuItem;
-import com.alorma.github.ui.fragment.orgs.OrganzationsFragment;
 import com.alorma.github.ui.fragment.repos.ReposFragment;
 import com.alorma.github.ui.fragment.repos.StarredReposFragment;
 import com.alorma.github.ui.fragment.repos.WatchedReposFragment;
 import com.alorma.github.ui.fragment.search.SearchReposFragment;
-import com.alorma.github.ui.fragment.users.FollowersFragment;
-import com.alorma.github.ui.fragment.users.FollowingFragment;
 
-public class MainActivity extends BaseActivity implements MenuFragment.OnMenuItemSelectedListener, IabHelper.OnIabSetupFinishedListener,
+public class MainActivity extends BaseActivity implements MenuFragmentRepos.OnMenuItemSelectedListener, IabHelper.OnIabSetupFinishedListener,
 		IabHelper.OnIabPurchaseFinishedListener, IabHelper.QueryInventoryFinishedListener, SearchView.OnQueryTextListener, SearchView.OnCloseListener {
 
-	private MenuFragment menuFragment;
+	private MenuFragmentRepos menuFragmentRepos;
 
 	private ReposFragment reposFragment;
 	private StarredReposFragment starredFragment;
 	private WatchedReposFragment watchedFragment;
-	private FollowersFragment followersFragment;
-	private FollowingFragment followingFragment;
 	private IabHelper iabHelper;
 	private boolean iabEnabled;
-	private OrganzationsFragment organizationsFragmet;
 	private EventsListFragment eventsFragment;
 	private GistsListFragment gistsFragment;
 	private SearchReposFragment searchReposFragment;
@@ -69,9 +62,9 @@ public class MainActivity extends BaseActivity implements MenuFragment.OnMenuIte
 		checkIab();
 
 		FragmentTransaction ft = getFragmentManager().beginTransaction();
-		menuFragment = MenuFragment.newInstance();
-		menuFragment.setOnMenuItemSelectedListener(this);
-		ft.replace(R.id.menuContent, menuFragment);
+		menuFragmentRepos = MenuFragmentRepos.newInstance();
+		menuFragmentRepos.setOnMenuItemSelectedListener(this);
+		ft.replace(R.id.menuContent, menuFragmentRepos);
 		ft.commit();
 	}
 
@@ -177,54 +170,47 @@ public class MainActivity extends BaseActivity implements MenuFragment.OnMenuIte
 	}
 
 	@Override
-	public void onProfileSelected() {
+	public boolean onProfileSelected() {
 		Intent launcherIntent = ProfileActivity.createLauncherIntent(this);
 		startActivity(launcherIntent);
+		return false;
 	}
 
 	@Override
-	public void onReposSelected() {
+	public boolean onReposSelected() {
 		if (reposFragment == null) {
 			reposFragment = ReposFragment.newInstance();
 		}
 
 		setFragment(reposFragment);
+		return true;
 	}
 
 	@Override
-	public void onStarredSelected() {
+	public boolean onStarredSelected() {
 		if (starredFragment == null) {
 			starredFragment = StarredReposFragment.newInstance();
 		}
 
 		setFragment(starredFragment);
+		return true;
 	}
 
 	@Override
-	public void onWatchedSelected() {
+	public boolean onWatchedSelected() {
 		if (watchedFragment == null) {
 			watchedFragment = WatchedReposFragment.newInstance();
 		}
 
 		setFragment(watchedFragment);
+		return true;
 	}
 
 	@Override
-	public void onFollowersSelected() {
-		if (followersFragment == null) {
-			followersFragment = FollowersFragment.newInstance();
-		}
-
-		setFragment(followersFragment);
-	}
-
-	@Override
-	public void onFollowingSelected() {
-		if (followingFragment == null) {
-			followingFragment = FollowingFragment.newInstance();
-		}
-
-		setFragment(followingFragment);
+	public boolean onPeopleSelected() {
+		Intent intent = PeopleActivity.launchIntent(this);
+		startActivity(intent);
+		return false;
 	}
 
 	@Override
@@ -236,15 +222,7 @@ public class MainActivity extends BaseActivity implements MenuFragment.OnMenuIte
 	}
 
 	@Override
-	public void onOrganizationsSelected() {
-		if (organizationsFragmet == null) {
-			organizationsFragmet = OrganzationsFragment.newInstance();
-		}
-		setFragment(organizationsFragmet);
-	}
-
-	@Override
-	public void onUserEventsSelected() {
+	public boolean onUserEventsSelected() {
 		GitskariosSettings settings = new GitskariosSettings(this);
 		String user = settings.getAuthUser(null);
 		if (user != null) {
@@ -253,24 +231,28 @@ public class MainActivity extends BaseActivity implements MenuFragment.OnMenuIte
 			}
 			setFragment(eventsFragment);
 		}
+		return true;
 	}
 
 	@Override
-	public void onSettingsSelected() {
+	public boolean onSettingsSelected() {
 		Intent intent = new Intent(this, SettingsActivity.class);
 		startActivity(intent);
+		return false;
 	}
 
 	@Override
-	public void onAboutSelected() {
+	public boolean onAboutSelected() {
 		Intent intent = AboutActivity.launchIntent(this);
 		startActivity(intent);
+		return false;
 	}
 
 	@Override
-	public void onGitsSelected() {
+	public boolean onGitsSelected() {
 		Intent intent = GistsActivity.launchIntent(this);
 		startActivity(intent);
+		return false;
 	}
 
 	@Override

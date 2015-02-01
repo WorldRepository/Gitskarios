@@ -4,7 +4,6 @@ import android.app.Fragment;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.StyleRes;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -18,6 +17,7 @@ import com.alorma.github.sdk.services.client.BaseClient;
 import com.alorma.github.sdk.services.user.GetAuthUserClient;
 import com.alorma.github.ui.adapter.MenuItemsAdapter;
 import com.alorma.github.ui.view.CircularImageView;
+import com.alorma.github.utils.AttributesUtils;
 import com.alorma.githubicons.GithubIconify;
 import com.nostra13.universalimageloader.core.ImageLoader;
 
@@ -30,7 +30,7 @@ import retrofit.client.Response;
 /**
  * Created by Bernat on 13/08/2014.
  */
-public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuItemSelectedListener, BaseClient.OnResultCallback<User>, View.OnClickListener {
+public class MenuFragmentRepos extends Fragment implements MenuItemsAdapter.OnMenuItemSelectedListener, BaseClient.OnResultCallback<User>, View.OnClickListener {
 
 	private static final String STYLE = "STYLE";
 	private OnMenuItemSelectedListener onMenuItemSelectedListener;
@@ -41,19 +41,8 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 	private CircularImageView userAvatar;
 	private View userLayout;
 
-	public static MenuFragment newInstance() {
-		return new MenuFragment();
-	}
-	public static MenuFragment newInstance(@StyleRes int style) {
-		Bundle b = new Bundle();
-
-		b.putInt(STYLE, style);
-		
-		MenuFragment f = new MenuFragment();
-		
-		f.setArguments(b);
-		
-		return f;
+	public static MenuFragmentRepos newInstance() {
+		return new MenuFragmentRepos();
 	}
 
 	@Nullable
@@ -81,19 +70,20 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 		userLogin.setOnClickListener(this);
 		userName.setOnClickListener(this);
 
-		List<MenuItem> objMenuItems = new ArrayList<MenuItem>();
+		List<MenuItem> objMenuItems = new ArrayList<>();
 
-		objMenuItems.add(new MenuItem(0, 1, R.string.menu_organizations, GithubIconify.IconValue.octicon_organization));
 		objMenuItems.add(new MenuItem(1, 1, R.string.menu_events, GithubIconify.IconValue.octicon_calendar));
 
 		currentSelectedItem = new MenuItem(0, 2, R.string.navigation_repos, GithubIconify.IconValue.octicon_repo);
 		objMenuItems.add(currentSelectedItem);
 		objMenuItems.add(new MenuItem(1, 2, R.string.navigation_starred_repos, GithubIconify.IconValue.octicon_star));
 		objMenuItems.add(new MenuItem(2, 2, R.string.navigation_watched_repos, GithubIconify.IconValue.octicon_eye));
-		objMenuItems.add(new MenuItem(3, 2, R.string.navigation_gists, GithubIconify.IconValue.octicon_gist));
 
-		objMenuItems.add(new MenuItem(0, 3, R.string.navigation_followers, GithubIconify.IconValue.octicon_person));
-		objMenuItems.add(new MenuItem(1, 3, R.string.navigation_following, GithubIconify.IconValue.octicon_person));
+		int primarColorGists = AttributesUtils.getPrimaryColor(getActivity(), R.style.AppTheme_Gists);
+		objMenuItems.add(new MenuItem(0, 3, R.string.navigation_gists, GithubIconify.IconValue.octicon_gist, primarColorGists));
+
+		int primarColorPeople = AttributesUtils.getPrimaryColor(getActivity(), R.style.AppTheme_People);
+		objMenuItems.add(new MenuItem(1, 3, R.string.navigation_people, GithubIconify.IconValue.octicon_person, primarColorPeople));
 
 		objMenuItems.add(new DividerMenuItem());
 		objMenuItems.add(new MenuItem(0, 4, R.string.navigation_settings, null));
@@ -103,12 +93,7 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 		RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.recycler);
 		recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-		int style = R.style.AppTheme_Repos;
-		if (getArguments() != null) {
-			style = getArguments().getInt(STYLE, R.style.AppTheme_Repos);
-		}
-		
-		adapter = new MenuItemsAdapter(getActivity(), objMenuItems, style);
+		adapter = new MenuItemsAdapter(getActivity(), objMenuItems);
 		adapter.setOnMenuItemSelectedListener(this);
 		recyclerView.setAdapter(adapter);
 
@@ -129,71 +114,72 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 			boolean changeTitle = true;
 			switch (item.parentId) {
 				case 1:
-					itemUser(item);
+					changeTitle = itemUser(item);
 					break;
 				case 2:
-					itemRepositories(item);
+					changeTitle = itemRepositories(item);
 					break;
 				case 3:
-					itemPeople(item);
+					changeTitle = itemNewActivities(item);
 					break;
 				case 4:
-					changeTitle = false;
-					itemExtras(item);
+					changeTitle = itemExtras(item);
 					break;
 			}
 			onMenuItemSelectedListener.onMenuItemSelected(item, changeTitle);
 		}
 	}
 
-	private void itemUser(MenuItem item) {
+	private boolean itemUser(MenuItem item) {
+		boolean change = true;
 		switch (item.id) {
-			case 0:
-				onMenuItemSelectedListener.onOrganizationsSelected();
-				break;
 			case 1:
-				onMenuItemSelectedListener.onUserEventsSelected();
+				change = onMenuItemSelectedListener.onUserEventsSelected();
 				break;
 		}
+		return change;
 	}
 
-	private void itemRepositories(MenuItem item) {
+	private boolean itemRepositories(MenuItem item) {
+		boolean change = true;
 		switch (item.id) {
 			case 0:
-				onMenuItemSelectedListener.onReposSelected();
+				change = onMenuItemSelectedListener.onReposSelected();
 				break;
 			case 1:
-				onMenuItemSelectedListener.onStarredSelected();
+				change = onMenuItemSelectedListener.onStarredSelected();
 				break;
 			case 2:
-				onMenuItemSelectedListener.onWatchedSelected();
-				break;
-			case 3:
-				onMenuItemSelectedListener.onGitsSelected();
+				change = onMenuItemSelectedListener.onWatchedSelected();
 				break;
 		}
+		return change;
 	}
 
-	private void itemPeople(MenuItem item) {
+	private boolean itemNewActivities(MenuItem item) {
+		boolean change = true;
 		switch (item.id) {
 			case 0:
-				onMenuItemSelectedListener.onFollowersSelected();
+				change = onMenuItemSelectedListener.onGitsSelected();
 				break;
 			case 1:
-				onMenuItemSelectedListener.onFollowingSelected();
+				change = onMenuItemSelectedListener.onPeopleSelected();
 				break;
 		}
+		return change;
 	}
 
-	private void itemExtras(MenuItem item) {
+	private boolean itemExtras(MenuItem item) {
+		boolean change = true;
 		switch (item.id) {
 			case 0:
-				onMenuItemSelectedListener.onSettingsSelected();
+				change = onMenuItemSelectedListener.onSettingsSelected();
 				break;
 			case 1:
-				onMenuItemSelectedListener.onAboutSelected();
+				change = onMenuItemSelectedListener.onAboutSelected();
 				break;
 		}
+		return change;
 	}
 
 	public void setOnMenuItemSelectedListener(OnMenuItemSelectedListener onMenuItemSelectedListener) {
@@ -221,30 +207,26 @@ public class MenuFragment extends Fragment implements MenuItemsAdapter.OnMenuIte
 	}
 
 	public interface OnMenuItemSelectedListener {
-		void onProfileSelected();
+		boolean onProfileSelected();
 
-		void onReposSelected();
+		boolean onReposSelected();
 
-		void onStarredSelected();
+		boolean onStarredSelected();
 
-		void onWatchedSelected();
+		boolean onWatchedSelected();
 
-		void onFollowersSelected();
-
-		void onFollowingSelected();
+		boolean onPeopleSelected();
 
 		void onMenuItemSelected(@NonNull MenuItem item, boolean changeTitle);
 
 		void closeMenu();
 
-		void onOrganizationsSelected();
+		boolean onUserEventsSelected();
 
-		void onUserEventsSelected();
+		boolean onSettingsSelected();
 
-		void onSettingsSelected();
+		boolean onAboutSelected();
 
-		void onAboutSelected();
-
-		void onGitsSelected();
+		boolean onGitsSelected();
 	}
 }
