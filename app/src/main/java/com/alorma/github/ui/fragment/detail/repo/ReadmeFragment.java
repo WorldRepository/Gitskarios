@@ -1,13 +1,16 @@
 package com.alorma.github.ui.fragment.detail.repo;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -16,23 +19,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
 
 import com.alorma.github.R;
 import com.alorma.github.sdk.bean.dto.response.Branch;
+import com.alorma.github.sdk.bean.info.RepoInfo;
 import com.alorma.github.sdk.services.client.BaseClient;
 import com.alorma.github.sdk.services.repo.GetReadmeContentsClient;
-import com.alorma.github.sdk.services.repo.actions.CheckRepoStarredClient;
-import com.alorma.github.sdk.services.repo.actions.CheckRepoWatchedClient;
-import com.alorma.github.sdk.services.repo.actions.StarRepoClient;
-import com.alorma.github.sdk.services.repo.actions.UnstarRepoClient;
-import com.alorma.github.sdk.services.repo.actions.UnwatchRepoClient;
-import com.alorma.github.sdk.services.repo.actions.WatchRepoClient;
 import com.alorma.github.ui.ErrorHandler;
 import com.alorma.github.ui.fragment.base.BaseFragment;
-import com.alorma.github.ui.listeners.RefreshListener;
 import com.alorma.github.ui.listeners.TitleProvider;
-import com.alorma.github.utils.AttributesUtils;
 import com.alorma.githubicons.GithubIconDrawable;
 import com.alorma.githubicons.GithubIconify;
 
@@ -44,21 +39,18 @@ import retrofit.client.Response;
  */
 public class ReadmeFragment extends BaseFragment implements BaseClient.OnResultCallback<String>, BranchManager, TitleProvider {
 
-	public static final String OWNER = "OWNER";
-	public static final String REPO = "REPO";
-
+	private static final String REPO_INFO = "REPO_INFO";
+	private RepoInfo repoInfo;
+	
 	private WebView webview;
-	private RefreshListener refreshListener;
-	private String owner;
-	private String repo;
 
-	public static ReadmeFragment newInstance(String owner, String repo, RefreshListener refreshListener) {
+	private UpdateReceiver updateReceiver;
+
+	public static ReadmeFragment newInstance(RepoInfo repoInfo) {
 		Bundle bundle = new Bundle();
-		bundle.putString(OWNER, owner);
-		bundle.putString(REPO, repo);
+		bundle.putParcelable(REPO_INFO, repoInfo);
 
 		ReadmeFragment f = new ReadmeFragment();
-		f.setRefreshListener(refreshListener);
 		f.setArguments(bundle);
 		return f;
 	}
@@ -73,11 +65,10 @@ public class ReadmeFragment extends BaseFragment implements BaseClient.OnResultC
 	@Override
 	public void onViewCreated(View view, Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-
+		
 		if (getArguments() != null) {
-			owner = getArguments().getString(OWNER);
-			repo = getArguments().getString(REPO);
-
+			loadArguments();
+			
 			webview = (WebView) view.findViewById(R.id.webContainer);
 			webview.setPadding(0, 24, 0, 0);
 			webview.getSettings().setJavaScriptEnabled(true);
@@ -90,39 +81,20 @@ public class ReadmeFragment extends BaseFragment implements BaseClient.OnResultC
 			webview.clearSslPreferences();
 			webview.getSettings().setUseWideViewPort(false);
 			webview.setBackgroundColor(getResources().getColor(R.color.gray_github_light));
-			if (refreshListener != null) {
-				refreshListener.showRefresh();
-			}
-			GetReadmeContentsClient repoMarkdownClient = new GetReadmeContentsClient(getActivity(), owner, repo);
-			repoMarkdownClient.setCallback(this);
-			repoMarkdownClient.execute();
+			getContent();
 		}
 	}
 
-	@Override
-	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-		super.onCreateOptionsMenu(menu, inflater);
-		menu.add(0, R.id.action_repo_watch, 1, R.string.menu_watch);
+	protected void loadArguments() {
+		if (getArguments() != null) {
+			repoInfo = getArguments().getParcelable(REPO_INFO);
+		}
+	}
 
-		int color = Color.WHITE;
-
-		MenuItem itemWatch = menu.findItem(R.id.action_repo_watch);
-		itemWatch.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-		GithubIconDrawable drawableWatch = new GithubIconDrawable(getActivity(), GithubIconify.IconValue.octicon_eye);
-		drawableWatch.setStyle(Paint.Style.FILL);
-		drawableWatch.color(color);
-		drawableWatch.actionBarSize();
-		itemWatch.setIcon(drawableWatch);
-
-		menu.add(0, R.id.action_repo_star, 0, R.string.menu_star);
-
-		MenuItem itemStar = menu.findItem(R.id.action_repo_star);
-		itemStar.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-		GithubIconDrawable drawableStar = new GithubIconDrawable(getActivity(), GithubIconify.IconValue.octicon_star);
-		drawableStar.setStyle(Paint.Style.FILL);
-		drawableStar.color(color);
-		drawableStar.actionBarSize();
-		itemStar.setIcon(drawableStar);
+	private void getContent() {
+		GetReadmeContentsClient repoMarkdownClient = new GetReadmeContentsClient(getActivity(), repoInfo);
+		repoMarkdownClient.setCallback(this);
+		repoMarkdownClient.execute();
 	}
 
 	@Override
@@ -135,27 +107,17 @@ public class ReadmeFragment extends BaseFragment implements BaseClient.OnResultC
 		onError("README", error);
 	}
 
-	public void setRefreshListener(RefreshListener refreshListener) {
-		this.refreshListener = refreshListener;
-	}
-
 	@Override
 	public void setCurrentBranch(Branch branch) {
 		if (getActivity() != null) {
-			GetReadmeContentsClient repoMarkdownClient = new GetReadmeContentsClient(getActivity(), owner, repo);
-			repoMarkdownClient.setCurrentBranch(branch);
+			GetReadmeContentsClient repoMarkdownClient = new GetReadmeContentsClient(getActivity(), repoInfo);
 			repoMarkdownClient.setCallback(this);
 			repoMarkdownClient.execute();
 		}
 	}
 
 	private void onError(String tag, RetrofitError error) {
-
 		ErrorHandler.onRetrofitError(getActivity(), "MarkdownFragment", error);
-
-		if (refreshListener != null) {
-			refreshListener.cancelRefresh();
-		}
 	}
 
 	@Override
@@ -171,21 +133,42 @@ public class ReadmeFragment extends BaseFragment implements BaseClient.OnResultC
 			startActivity(i);
 			return true;
 		}
+	}
+	
+	public void reload() {
+		getContent();
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();
+		updateReceiver = new UpdateReceiver();
+		IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+		getActivity().registerReceiver(updateReceiver, intentFilter);
+	}
+
+	@Override
+	public void onStop() {
+		super.onStop();
+		getActivity().unregisterReceiver(updateReceiver);
+	}
+
+	public class UpdateReceiver extends BroadcastReceiver {
 
 		@Override
-		public void onPageStarted(WebView view, String url, Bitmap favicon) {
-			super.onPageStarted(view, url, favicon);
-			if (refreshListener != null) {
-				refreshListener.showRefresh();
+		public void onReceive(Context context, Intent intent) {
+
+			if (isOnline(context)) {
+				reload();
 			}
 		}
 
-		@Override
-		public void onPageFinished(WebView view, String url) {
-			super.onPageFinished(view, url);
-			if (refreshListener != null) {
-				refreshListener.cancelRefresh();
-			}
+		public boolean isOnline(Context context) {
+			ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+			NetworkInfo netInfoMob = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+			NetworkInfo netInfoWifi = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+			return (netInfoMob != null && netInfoMob.isConnectedOrConnecting()) || (netInfoWifi != null && netInfoWifi.isConnectedOrConnecting());
 		}
 	}
+	
 }
