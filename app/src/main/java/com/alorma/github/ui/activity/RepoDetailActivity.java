@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v13.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
@@ -33,7 +32,6 @@ import com.alorma.github.ui.fragment.commit.CommitsListFragment;
 import com.alorma.github.ui.fragment.detail.repo.ReadmeFragment;
 import com.alorma.github.ui.fragment.detail.repo.SourceListFragment;
 import com.alorma.github.ui.fragment.issues.IssuesListFragment;
-import com.alorma.github.ui.listeners.RefreshListener;
 import com.alorma.github.ui.view.SlidingTabLayout;
 import com.alorma.github.utils.AttributesUtils;
 import com.alorma.githubicons.GithubIconDrawable;
@@ -48,15 +46,11 @@ import retrofit.client.Response;
 /**
  * Created by Bernat on 17/07/2014.
  */
-public class RepoDetailActivity extends BackActivity implements RefreshListener, BaseClient.OnResultCallback<Repo>, AdapterView.OnItemSelectedListener {
+public class RepoDetailActivity extends BackActivity implements BaseClient.OnResultCallback<Repo>, AdapterView.OnItemSelectedListener {
 
 	public static final String OWNER = "OWNER";
 	public static final String REPO = "REPO";
 	public static final String FROM_INTENT_FILTER = "FROM_INTENT_FILTER";
-
-	private Uri shareUri;
-	private RepoInfo repoInfo;
-	private boolean fromIntentFilter;
 
 	private Boolean repoStarred = null;
 	private Boolean repoWatched = null;
@@ -70,6 +64,7 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 
 	private ViewPager viewPager;
 	private List<Fragment> listFragments;
+	private SlidingTabLayout slidingTabLayout;
 
 	public static Intent createLauncherIntent(Context context, String owner, String repo) {
 		Bundle bundle = new Bundle();
@@ -99,43 +94,60 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 		setContentView(R.layout.activity_repo_detail);
 
 		if (getIntent().getExtras() != null) {
-			repoInfo = new RepoInfo();
+			RepoInfo repoInfo = new RepoInfo();
 			repoInfo.owner = getIntent().getExtras().getString(OWNER);
-			repoInfo.repo = getIntent().getExtras().getString(REPO);
+			repoInfo.name = getIntent().getExtras().getString(REPO);
 
-			setTitle(repoInfo.repo);
+			setTitle(repoInfo.name);
 
-			fromIntentFilter = getIntent().getExtras().getBoolean(FROM_INTENT_FILTER);
+			slidingTabLayout = (SlidingTabLayout) findViewById(R.id.tabStrip);
 
-			SlidingTabLayout slidingTabLayout = (SlidingTabLayout) findViewById(R.id.tabStrip);
-
-			slidingTabLayout.setSelectedIndicatorColors(Color.WHITE);
+			slidingTabLayout.setSelectedIndicatorColors(AttributesUtils.getAccentColor(this, R.style.AppTheme_Repos));
 			slidingTabLayout.setDividerColors(Color.TRANSPARENT);
 
 			viewPager = (ViewPager) findViewById(R.id.pager);
 
-			readmeFragment = ReadmeFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
-			sourceListFragment = SourceListFragment.newInstance(repoInfo.owner, repoInfo.repo, null, this);
-			issuesListFragment = IssuesListFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
-			commitsListFragment = CommitsListFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
-			//pullRequestsListFragment = PullRequestsListFragment.newInstance(repoInfo.owner, repoInfo.repo, null);
-
-			listFragments = new ArrayList<>();
-			listFragments.add(readmeFragment);
-			listFragments.add(sourceListFragment);
-			listFragments.add(commitsListFragment);
-			listFragments.add(issuesListFragment);
-			//listFragments.add(pullRequestsListFragment);
-
-			viewPager.setAdapter(new NavigationPagerAdapter(getFragmentManager(), listFragments));
-			
-			viewPager.setOffscreenPageLimit(listFragments.size());
-					
-			slidingTabLayout.setViewPager(viewPager);
-			load();
+			load(repoInfo);
 		} else {
 			finish();
 		}
+	}
+
+	private void load(RepoInfo repoInfo) {
+		GetRepoClient repoClient = new GetRepoClient(this, repoInfo);
+		repoClient.setOnResultCallback(this);
+		repoClient.execute();
+	}
+
+	private void setData() {
+		
+		readmeFragment = ReadmeFragment.newInstance(getRepoInfo());
+		sourceListFragment = SourceListFragment.newInstance(getRepoInfo());
+		commitsListFragment = CommitsListFragment.newInstance(getRepoInfo());
+		issuesListFragment = IssuesListFragment.newInstance(getRepoInfo());
+		//pullRequestsListFragment = PullRequestsListFragment.newInstance(currentRepo.owner.login, currentRepo.name, null);
+
+		listFragments = new ArrayList<>();
+		listFragments.add(readmeFragment);
+		listFragments.add(sourceListFragment);
+		listFragments.add(commitsListFragment);
+		listFragments.add(issuesListFragment);
+		//listFragments.add(pullRequestsListFragment);
+
+		viewPager.setAdapter(new NavigationPagerAdapter(getFragmentManager(), listFragments));
+
+		viewPager.setOffscreenPageLimit(listFragments.size());
+
+		slidingTabLayout.setViewPager(viewPager);		
+	}
+	
+	private RepoInfo getRepoInfo() {
+		RepoInfo repoInfo = new RepoInfo();
+		repoInfo.owner = currentRepo.owner.login;
+		repoInfo.name = currentRepo.name;
+		repoInfo.branch = currentRepo.default_branch;
+		
+		return repoInfo;
 	}
 
 	private class NavigationPagerAdapter extends FragmentPagerAdapter {
@@ -156,7 +168,6 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 		public int getCount() {
 			return listFragments.size();
 		}
-
 		@Override
 		public CharSequence getPageTitle(int position) {
 			switch (position) {
@@ -173,18 +184,15 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 			}
 			return "";
 		}
+
 	}
 
-	private void load() {
-		GetRepoClient repoClient = new GetRepoClient(this, repoInfo.owner, repoInfo.repo);
-		repoClient.setOnResultCallback(this);
-		repoClient.execute();
-
-		CheckRepoStarredClient starredClient = new CheckRepoStarredClient(this, repoInfo.owner, repoInfo.repo);
+	protected void getStarWatchData() {
+		CheckRepoStarredClient starredClient = new CheckRepoStarredClient(this, currentRepo.owner.login, currentRepo.name);
 		starredClient.setOnResultCallback(new StarredResult());
 		starredClient.execute();
 
-		CheckRepoWatchedClient watcheClien = new CheckRepoWatchedClient(this, repoInfo.owner, repoInfo.repo);
+		CheckRepoWatchedClient watcheClien = new CheckRepoWatchedClient(this, currentRepo.owner.login, currentRepo.name);
 		watcheClien.setOnResultCallback(new WatchedResult());
 		watcheClien.execute();
 	}
@@ -268,8 +276,10 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 				startActivity(launcherActivity);
 			}
 		} else if (item.getItemId() == R.id.share_repo) {
-			Intent intent = getShareIntent();
-			startActivity(intent);
+			if (currentRepo != null) {
+				Intent intent = getShareIntent();
+				startActivity(intent);
+			}
 		} else if (item.getItemId() == R.id.action_repo_watch) {
 			changeWatchedStatus();
 		} else if (item.getItemId() == R.id.action_repo_star) {
@@ -281,11 +291,11 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 
 	private void changeStarStatus() {
 		if (repoStarred) {
-			UnstarRepoClient unstarRepoClient = new UnstarRepoClient(this, repoInfo.owner, repoInfo.repo);
+			UnstarRepoClient unstarRepoClient = new UnstarRepoClient(this, currentRepo.owner.login, currentRepo.name);
 			unstarRepoClient.setOnResultCallback(new UnstarActionResult());
 			unstarRepoClient.execute();
 		} else {
-			StarRepoClient starRepoClient = new StarRepoClient(this, repoInfo.owner, repoInfo.repo);
+			StarRepoClient starRepoClient = new StarRepoClient(this, currentRepo.owner.login, currentRepo.name);
 			starRepoClient.setOnResultCallback(new StarActionResult());
 			starRepoClient.execute();
 		}
@@ -293,24 +303,14 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 
 	private void changeWatchedStatus() {
 		if (repoWatched) {
-			UnwatchRepoClient unwatchRepoClient = new UnwatchRepoClient(this, repoInfo.owner, repoInfo.repo);
+			UnwatchRepoClient unwatchRepoClient = new UnwatchRepoClient(this, currentRepo.owner.login, currentRepo.name);
 			unwatchRepoClient.setOnResultCallback(new UnwatchActionResult());
 			unwatchRepoClient.execute();
 		} else {
-			WatchRepoClient watchRepoClient = new WatchRepoClient(this, repoInfo.owner, repoInfo.repo);
+			WatchRepoClient watchRepoClient = new WatchRepoClient(this, currentRepo.owner.login, currentRepo.name);
 			watchRepoClient.setOnResultCallback(new WatchActionResult());
 			watchRepoClient.execute();
 		}
-	}
-
-	@Override
-	public void showRefresh() {
-		// TODO START LOADING
-	}
-
-	@Override
-	public void cancelRefresh() {
-		// TODO STOP LOADING
 	}
 
 	@Override
@@ -320,23 +320,21 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 
 			setTitle(currentRepo.name);
 
+			getStarWatchData();
+			
+			setData();
+			
 			this.invalidateOptionsMenu();
-
-			cancelRefresh();
 
 			if (issuesListFragment != null) {
 				issuesListFragment.setPermissions(repo.permissions);
 			}
 		}
-
-
-		cancelRefresh();
 	}
 
 	@Override
 	public void onFail(RetrofitError error) {
 		ErrorHandler.onRetrofitError(this, "RepoDetailFragment", error);
-		cancelRefresh();
 	}
 
 	@Override
@@ -360,7 +358,6 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 				repoStarred = true;
 				invalidateOptionsMenu();
 			}
-			cancelRefresh();
 		}
 
 		@Override
@@ -371,7 +368,6 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 					invalidateOptionsMenu();
 				}
 			}
-			cancelRefresh();
 		}
 	}
 
@@ -384,12 +380,11 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 				Toast.makeText(RepoDetailActivity.this, "Repo unstarred", Toast.LENGTH_SHORT).show();
 				invalidateOptionsMenu();
 			}
-			cancelRefresh();
 		}
 
 		@Override
 		public void onFail(RetrofitError error) {
-			cancelRefresh();
+			
 		}
 	}
 
@@ -401,14 +396,14 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 				repoStarred = true;
 				invalidateOptionsMenu();
 			}
-			cancelRefresh();
+			
 		}
 
 		@Override
 		public void onFail(RetrofitError error) {
 			if (error.getResponse() != null && error.getResponse().getStatus() == 404) {
 			}
-			cancelRefresh();
+			
 		}
 	}
 
@@ -424,7 +419,6 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 				repoWatched = true;
 				invalidateOptionsMenu();
 			}
-			cancelRefresh();
 		}
 
 		@Override
@@ -435,7 +429,6 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 					invalidateOptionsMenu();
 				}
 			}
-			cancelRefresh();
 		}
 	}
 
@@ -445,15 +438,14 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 		public void onResponseOk(Object o, Response r) {
 			if (r != null && r.getStatus() == 204) {
 				repoWatched = false;
-				Toast.makeText(RepoDetailActivity.this, "Not watching repo", Toast.LENGTH_SHORT).show();
+				Toast.makeText(RepoDetailActivity.this, "Not watching name", Toast.LENGTH_SHORT).show();
 				invalidateOptionsMenu();
 			}
-			cancelRefresh();
 		}
 
 		@Override
 		public void onFail(RetrofitError error) {
-			cancelRefresh();
+			
 		}
 	}
 
@@ -463,15 +455,13 @@ public class RepoDetailActivity extends BackActivity implements RefreshListener,
 		public void onResponseOk(Object o, Response r) {
 			if (r != null && r.getStatus() == 204) {
 				repoWatched = true;
-				Toast.makeText(RepoDetailActivity.this, "Watching repo", Toast.LENGTH_SHORT).show();
+				Toast.makeText(RepoDetailActivity.this, "Watching name", Toast.LENGTH_SHORT).show();
 				invalidateOptionsMenu();
 			}
-			cancelRefresh();
 		}
 
 		@Override
 		public void onFail(RetrofitError error) {
-			cancelRefresh();
 		}
 	}
 

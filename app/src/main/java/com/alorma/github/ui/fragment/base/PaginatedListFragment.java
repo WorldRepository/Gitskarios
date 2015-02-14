@@ -25,17 +25,6 @@ public abstract class PaginatedListFragment<K> extends LoadingListFragment imple
 	protected boolean refreshing;
 
 	@Override
-	public void onViewCreated(View view, Bundle savedInstanceState) {
-		super.onViewCreated(view, savedInstanceState);
-
-		executeRequest();
-	}
-
-	protected void executeRequest() {
-		startRefresh();
-	}
-
-	@Override
 	public void onScroll(AbsListView absListView, int first, int last, int total) {
 		super.onScroll(absListView, first, last, total);
 		if (total > 0 && first + last == total) {
@@ -47,15 +36,10 @@ public abstract class PaginatedListFragment<K> extends LoadingListFragment imple
 		}
 	}
 
-	protected void executePaginatedRequest(int page) {
-		startRefresh();
-	}
-
 	@Override
 	public void onResponseOk(K k, Response r) {
+		stopRefresh();
 		if (getActivity() != null && isAdded()) {
-			stopRefresh();
-
 			if (k != null && k instanceof List) {
 				if (emptyLy != null && ((List) k).size() > 0) {
 					emptyLy.setVisibility(View.GONE);
@@ -74,8 +58,8 @@ public abstract class PaginatedListFragment<K> extends LoadingListFragment imple
 
 	@Override
 	public void onFail(RetrofitError error) {
+		stopRefresh();
 		if (getActivity() != null) {
-			stopRefresh();
 			if (getListAdapter() == null || getListAdapter().getCount() == 0) {
 				setEmpty();
 			}

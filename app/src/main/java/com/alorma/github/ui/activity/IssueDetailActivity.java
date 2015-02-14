@@ -1,9 +1,13 @@
 package com.alorma.github.ui.activity;
 
 import android.app.FragmentTransaction;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -24,7 +28,6 @@ import com.alorma.github.ui.ErrorHandler;
 import com.alorma.github.ui.activity.base.BackActivity;
 import com.alorma.github.ui.dialog.NewIssueCommentActivity;
 import com.alorma.github.ui.fragment.detail.issue.IssueDiscussionFragment;
-import com.alorma.github.ui.listeners.RefreshListener;
 import com.alorma.github.ui.view.FABCenterLayout;
 import com.alorma.github.utils.AttributesUtils;
 import com.alorma.githubicons.GithubIconDrawable;
@@ -34,8 +37,7 @@ import com.crashlytics.android.Crashlytics;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
 
-public class IssueDetailActivity extends BackActivity implements RefreshListener
-		, View.OnClickListener, BaseClient.OnResultCallback<Issue> {
+public class IssueDetailActivity extends BackActivity implements View.OnClickListener, BaseClient.OnResultCallback<Issue> {
 
 	public static final String ISSUE_INFO = "ISSUE_INFO";
 	public static final String PERMISSIONS = "PERMISSIONS";
@@ -70,12 +72,17 @@ public class IssueDetailActivity extends BackActivity implements RefreshListener
 			issueInfo = getIntent().getExtras().getParcelable(ISSUE_INFO);
 			permissions = getIntent().getExtras().getParcelable(PERMISSIONS);
 
-			GetIssueClient issuesClient = new GetIssueClient(this, issueInfo);
-			issuesClient.setOnResultCallback(this);
-			issuesClient.execute();
+			getContent();
 
 			findViews();
 		}
+	}
+
+	@Override
+	protected void getContent() {
+		GetIssueClient issuesClient = new GetIssueClient(this, issueInfo);
+		issuesClient.setOnResultCallback(this);
+		issuesClient.execute();
 	}
 
 	private void findViews() {
@@ -86,7 +93,7 @@ public class IssueDetailActivity extends BackActivity implements RefreshListener
 
 		fabLayout.setFabColor(accent);
 		fabLayout.setFabColorPressed(primaryDark);
-		
+
 		GithubIconDrawable drawable = new GithubIconDrawable(this, GithubIconify.IconValue.octicon_comment_discussion).color(Color.WHITE).fabSize();
 		fabLayout.setFabIcon(drawable);
 		fabLayout.setFabClickListener(this, getString(R.string.add_comment));
@@ -108,7 +115,6 @@ public class IssueDetailActivity extends BackActivity implements RefreshListener
 		try {
 			if (!isFinishing()) {
 				issueDiscussionFragment = IssueDiscussionFragment.newInstance(issueInfo);
-				issueDiscussionFragment.setRefreshListener(this);
 
 				FragmentTransaction ft = getFragmentManager().beginTransaction();
 				ft.replace(R.id.discussionFeed, issueDiscussionFragment);
@@ -179,16 +185,6 @@ public class IssueDetailActivity extends BackActivity implements RefreshListener
 		return true;
 	}
 
-	@Override
-	public void showRefresh() {
-
-	}
-
-	@Override
-	public void cancelRefresh() {
-
-	}
-
 	public void onAddComment() {
 		Intent intent = NewIssueCommentActivity.launchIntent(IssueDetailActivity.this, issueInfo);
 		startActivityForResult(intent, NEW_COMMENT_REQUEST);
@@ -215,7 +211,7 @@ public class IssueDetailActivity extends BackActivity implements RefreshListener
 	}
 
 	private void closeIssue() {
-		CloseIssueClient closeIssueClient = new CloseIssueClient(this, issueInfo.owner, issueInfo.repo, issueInfo.num);
+		CloseIssueClient closeIssueClient = new CloseIssueClient(this, issueInfo.repo.owner, issueInfo.repo.name, issueInfo.num);
 		closeIssueClient.setOnResultCallback(this);
 		closeIssueClient.execute();
 	}

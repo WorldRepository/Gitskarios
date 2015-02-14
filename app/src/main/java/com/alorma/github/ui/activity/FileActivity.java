@@ -19,6 +19,7 @@ import com.alorma.github.R;
 import com.alorma.github.inapp.Base64;
 import com.alorma.github.sdk.bean.dto.request.RequestMarkdownDTO;
 import com.alorma.github.sdk.bean.dto.response.Content;
+import com.alorma.github.sdk.bean.info.RepoInfo;
 import com.alorma.github.sdk.services.client.BaseClient;
 import com.alorma.github.sdk.services.content.GetFileContentClient;
 import com.alorma.github.sdk.services.content.GetMarkdownClient;
@@ -37,22 +38,23 @@ import retrofit.client.Response;
  */
 public class FileActivity extends BackActivity implements BaseClient.OnResultCallback<Content> {
 
-	private static final String OWNER = "OWNER";
-	private static final String REPO = "REPO";
-	private static final String HEAD = "HEAD";
+	private static final String REPO_INFO = "REPO_INFO";
 	private static final String NAME = "NAME";
 	private static final String PATH = "PATH";
 	private static final String PATCH = "PATCH";
+
 	private WebView webView;
 	private ImageView imageView;
 	private Content content;
-	private String patch;
 
-	public static Intent createLauncherIntent(Context context, String owner, String repo, String head, String name, String path) {
+	private String patch;
+	private String name;
+	private String path;
+	private RepoInfo repoInfo;
+
+	public static Intent createLauncherIntent(Context context, RepoInfo repoInfo, String name, String path) {
 		Bundle bundle = new Bundle();
-		bundle.putString(OWNER, owner);
-		bundle.putString(REPO, repo);
-		bundle.putString(HEAD, head);
+		bundle.putParcelable(REPO_INFO, repoInfo);
 		bundle.putString(NAME, name);
 		bundle.putString(PATH, path);
 
@@ -78,19 +80,10 @@ public class FileActivity extends BackActivity implements BaseClient.OnResultCal
 		webView = (WebView) findViewById(R.id.webview);
 		imageView = (ImageView) findViewById(R.id.imageView);
 
-		String owner = getIntent().getExtras().getString(OWNER);
-		String repo = getIntent().getExtras().getString(REPO);
-		String head = getIntent().getExtras().getString(HEAD);
-		String name = getIntent().getExtras().getString(NAME);
-		String path = getIntent().getExtras().getString(PATH);
+		repoInfo = getIntent().getExtras().getParcelable(REPO_INFO);
+		name = getIntent().getExtras().getString(NAME);
+		path = getIntent().getExtras().getString(PATH);
 		patch = getIntent().getExtras().getString(PATCH);
-
-		if (patch == null) {
-			GetFileContentClient fileContentClient = new GetFileContentClient(this, owner, repo, path, head);
-			fileContentClient.setOnResultCallback(this);
-			fileContentClient.execute();
-			setTitle(name);
-		}
 
 		webView.clearCache(true);
 		webView.clearFormData();
@@ -104,12 +97,22 @@ public class FileActivity extends BackActivity implements BaseClient.OnResultCal
 		settings.setBuiltInZoomControls(true);
 		settings.setJavaScriptEnabled(true);
 		webView.addJavascriptInterface(new JavaScriptInterface(), "bitbeaker");
-		webView.setWebChromeClient(new MyWebChromeClient());
 
-		if (patch != null) {
+		if (patch == null) {
+			getContent();
+			setTitle(name);
+		} else {
 			webView.loadUrl("file:///android_asset/diff.html");
 		}
+	}
 
+	@Override
+	protected void getContent() {
+		if (repoInfo != null) {
+			GetFileContentClient fileContentClient = new GetFileContentClient(this, repoInfo, path);
+			fileContentClient.setOnResultCallback(this);
+			fileContentClient.execute();
+		}
 	}
 
 	@Override
@@ -164,19 +167,9 @@ public class FileActivity extends BackActivity implements BaseClient.OnResultCal
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
 			}
-
 			return content.content;
 		} else {
 			return patch;
-		}
-	}
-
-	final class MyWebChromeClient extends WebChromeClient {
-		@Override
-		public void onProgressChanged(WebView view, int progress) {
-			if (progress >= 100) {
-				// TODO STOP LOADING
-			}
 		}
 	}
 
