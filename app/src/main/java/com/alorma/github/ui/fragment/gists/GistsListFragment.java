@@ -12,7 +12,7 @@ import com.alorma.githubicons.GithubIconify;
  */
 public class GistsListFragment extends PaginatedListFragment<ListGists> {
 
-	private GistsAdapter gistsAdapter;
+	protected GistsAdapter gistsAdapter;
 
 	public static GistsListFragment newInstance() {
 		return new GistsListFragment();

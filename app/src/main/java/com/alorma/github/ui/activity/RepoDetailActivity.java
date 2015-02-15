@@ -120,7 +120,6 @@ public class RepoDetailActivity extends BackActivity implements BaseClient.OnRes
 	}
 
 	private void setData() {
-		
 		readmeFragment = ReadmeFragment.newInstance(getRepoInfo());
 		sourceListFragment = SourceListFragment.newInstance(getRepoInfo());
 		commitsListFragment = CommitsListFragment.newInstance(getRepoInfo());
